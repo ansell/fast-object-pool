@@ -1,13 +1,16 @@
 package cn.danielw.fop;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
+ * Wrapper for objects included in {@link ObjectPool}s
+ * 
  * @author Daniel
- * AutoCloseable.close() is not idemponent, so don't close it multiple times!
  */
 public class Poolable<T> implements AutoCloseable {
 
     private final T object;
-    private ObjectPool<T> pool;
+    private final ObjectPool<T> pool;
     private final int partition;
     private long lastAccessTs;
 
@@ -31,7 +34,7 @@ public class Poolable<T> implements AutoCloseable {
     }
 
     public void returnObject() {
-        pool.returnObject(this);
+		pool.returnObject(this);
     }
 
     public long getLastAccessTs() {
@@ -47,6 +50,6 @@ public class Poolable<T> implements AutoCloseable {
      */
     @Override
     public void close() {
-        this.returnObject();
+		this.returnObject();
     }
 }

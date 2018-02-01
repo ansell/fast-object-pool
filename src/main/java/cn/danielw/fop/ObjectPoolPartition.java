@@ -46,6 +46,7 @@ public class ObjectPoolPartition<T> {
             if (Log.isDebug())
                 Log.debug("increase objects: count=", totalCount, ", queue size=", objectQueue.size());
         } catch (InterruptedException e) {
+        	Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
         return delta;

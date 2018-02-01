@@ -14,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 public class TestObjectPool {
 
 
-    public ObjectPool init(double scavengeRatio) {
+    public ObjectPool<StringBuilder> init(double scavengeRatio) {
         Logger.getLogger("").getHandlers()[0].setLevel(Level.ALL);
         Logger.getLogger("").setLevel(Level.ALL);
         PoolConfig config = new PoolConfig();
@@ -29,6 +29,8 @@ public class TestObjectPool {
 
             @Override
             public void destroy(StringBuilder o) {
+            	o.setLength(0);
+            	o.trimToSize();
             }
 
             @Override
@@ -36,12 +38,12 @@ public class TestObjectPool {
                 return true;
             }
         };
-        return new ObjectPool(config, factory);
+        return new ObjectPool<>(config, factory);
     }
 
     @Test
     public void testSimple() throws InterruptedException {
-        ObjectPool pool = init(1.0);
+        ObjectPool<StringBuilder> pool = init(1.0);
         for (int i = 0; i < 100; i++) {
             try (Poolable<StringBuilder> obj = pool.borrowObject()) {
                 obj.getObject().append("x");
@@ -53,7 +55,7 @@ public class TestObjectPool {
 
     @Test
     public void testShrink() throws InterruptedException {
-        final ObjectPool pool = init(1.0);
+        final ObjectPool<StringBuilder> pool = init(1.0);
         List<Poolable<StringBuilder>> borrowed = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             System.out.println("test borrow");
