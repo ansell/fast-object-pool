@@ -10,6 +10,7 @@ public class Poolable<T> implements AutoCloseable {
     private ObjectPool<T> pool;
     private final int partition;
     private long lastAccessTs;
+    private boolean closed;
 
     public Poolable(T t, ObjectPool<T> pool, int partition) {
         this.object = t;
@@ -47,6 +48,9 @@ public class Poolable<T> implements AutoCloseable {
      */
     @Override
     public void close() {
-        this.returnObject();
+        if (!closed) {
+            closed = true;
+            this.returnObject();
+        }
     }
 }
