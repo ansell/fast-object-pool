@@ -2,7 +2,6 @@ package cn.danielw.fop;
 
 /**
  * @author Daniel
- * AutoCloseable.close() is not idemponent, so don't close it multiple times!
  */
 public class Poolable<T> implements AutoCloseable {
 
@@ -23,15 +22,15 @@ public class Poolable<T> implements AutoCloseable {
         return object;
     }
 
-    public ObjectPool<T> getPool() {
+    ObjectPool<T> getPool() {
         return pool;
     }
 
-    public int getPartition() {
+    int getPartition() {
         return partition;
     }
 
-    public void returnObject() {
+    void returnObject() {
         pool.returnObject(this);
     }
 
@@ -39,13 +38,14 @@ public class Poolable<T> implements AutoCloseable {
         return lastAccessTs;
     }
 
-    public void setLastAccessTs(long lastAccessTs) {
+    void setLastAccessTs(long lastAccessTs) {
         this.lastAccessTs = lastAccessTs;
     }
 
-    /**
-     * This method is not idemponent, don't call it twice, which will return the object twice to the pool and cause severe problems.
-     */
+    void borrow() {
+    	closed = false;
+    }
+    
     @Override
     public void close() {
         if (!closed) {

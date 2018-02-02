@@ -12,7 +12,7 @@ public class ObjectPool<T> {
     protected final PoolConfig config;
     protected final ObjectFactory<T> factory;
     protected final ObjectPoolPartition<T>[] partitions;
-    private Scavenger scavenger;
+    private final Scavenger scavenger;
     private volatile boolean shuttingDown;
 
     public ObjectPool(PoolConfig poolConfig, ObjectFactory<T> objectFactory) {
@@ -24,11 +24,14 @@ public class ObjectPool<T> {
                 partitions[i] = new ObjectPoolPartition<>(this, i, config, objectFactory, createBlockingQueue(poolConfig));
             }
         } catch (InterruptedException e) {
+        	Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
         if (config.getScavengeIntervalMilliseconds() > 0) {
             this.scavenger = new Scavenger();
             this.scavenger.start();
+        } else {
+        	this.scavenger = null;
         }
     }
 
@@ -44,6 +47,7 @@ public class ObjectPool<T> {
         for (int i = 0; i < 3; i++) { // try at most three times
             Poolable<T> result = getObject(blocking);
             if (factory.validate(result.getObject())) {
+            	result.borrow();
                 return result;
             } else {
                 this.partitions[result.getPartition()].decreaseObject(result);
@@ -72,7 +76,8 @@ public class ObjectPool<T> {
                     }
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e); // will never happen
+            	Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
             }
         }
         freeObject.setLastAccessTs(System.currentTimeMillis());
@@ -87,7 +92,8 @@ public class ObjectPool<T> {
                 Log.debug("return object: queue size:", subPool.getObjectQueue().size(),
                     ", partition id:", obj.getPartition());
         } catch (InterruptedException e) {
-            throw new RuntimeException(e); // impossible for now, unless there is a bug, e,g. borrow once but return twice.
+        	Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
 
@@ -117,13 +123,15 @@ public class ObjectPool<T> {
         @Override
         public void run() {
             int partition = 0;
-            while (!ObjectPool.this.shuttingDown) {
+            while (!ObjectPool.this.shuttingDown && !Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(config.getScavengeIntervalMilliseconds());
                     partition = ++partition % config.getPartitionSize();
                     Log.debug("scavenge sub pool ",  partition);
                     partitions[partition].scavenge();
                 } catch (InterruptedException ignored) {
+                	Thread.currentThread().interrupt();
+                	return;
                 }
             }
         }

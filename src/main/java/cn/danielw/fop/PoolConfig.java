@@ -80,7 +80,7 @@ public class PoolConfig {
      * @param scavengeRatio must be a double between (0, 1]
      */
     public PoolConfig setScavengeRatio(double scavengeRatio) {
-        if (scavengeRatio <= 0 || scavengeRatio > 1) {
+        if (scavengeRatio <= 0.0d || scavengeRatio > 1.0d) {
             throw new IllegalArgumentException("Invalid scavenge ratio: " + scavengeRatio);
         }
         this.scavengeRatio = scavengeRatio;

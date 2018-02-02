@@ -35,20 +35,21 @@ public class ObjectPoolPartition<T> {
     }
 
     public synchronized int increaseObjects(int delta) {
-        if (delta + totalCount > config.getMaxSize()) {
-            delta = config.getMaxSize() - totalCount;
+    	int result = delta;
+        if (result + totalCount > config.getMaxSize()) {
+        	result = config.getMaxSize() - totalCount;
         }
         try {
-            for (int i = 0; i < delta; i++) {
+            for (int i = 0; i < result; i++) {
                 objectQueue.put(new Poolable<>(objectFactory.create(), pool, partition));
             }
-            totalCount += delta;
+            totalCount += result;
             if (Log.isDebug())
                 Log.debug("increase objects: count=", totalCount, ", queue size=", objectQueue.size());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        return delta;
+        return result;
     }
 
     public synchronized boolean decreaseObject(Poolable<T> obj) {
@@ -68,7 +69,7 @@ public class ObjectPoolPartition<T> {
         int removed = 0;
         long now = System.currentTimeMillis();
         Poolable<T> obj;
-        while (delta-- > 0 && (obj = objectQueue.poll()) != null) {
+        while (delta-- > 0 && (obj = objectQueue.peek()) != null) {
             // performance trade off: delta always decrease even if the queue is empty,
             // so it could take several intervals to shrink the pool to the configured min value.
             if (Log.isDebug())
@@ -77,9 +78,9 @@ public class ObjectPoolPartition<T> {
             if (now - obj.getLastAccessTs() > config.getMaxIdleMilliseconds() &&
                     ThreadLocalRandom.current().nextDouble(1) < config.getScavengeRatio()) {
                 decreaseObject(obj); // shrink the pool size if the object reaches max idle time
+                // Remove as it had expired
+                objectQueue.poll();
                 removed++;
-            } else {
-                objectQueue.put(obj); //put it back
             }
         }
         if (removed > 0) Log.debug(removed, " objects were scavenged.");
